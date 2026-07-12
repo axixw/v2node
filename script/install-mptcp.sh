@@ -2,12 +2,15 @@
 set -Eeuo pipefail
 
 GO_VERSION="${GO_VERSION:-1.26.1}"
-GO_INSTALL_ROOT="/usr/local/lib/v2node-build/go-${GO_VERSION}"
+GO_INSTALL_ROOT="/usr/local/lib/v2node-mptcp-build/go-${GO_VERSION}"
 GO_BIN=""
-PREFIX="/usr/local/v2node"
-CONFIG_DIR="/etc/v2node"
+PREFIX="/usr/local/v2node-mptcp"
+CONFIG_DIR="/etc/v2node-mptcp"
 CONFIG_FILE="${CONFIG_DIR}/config.json"
-SERVICE_FILE="/etc/systemd/system/v2node.service"
+SERVICE_NAME="v2node-mptcp"
+SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
+MANAGER_FILE="/usr/bin/v2node-mptcp"
+BINARY_NAME="v2node-mptcp"
 SOURCE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORK_DIR="$(mktemp -d)"
 BACKUP_BINARY=""
@@ -159,16 +162,16 @@ build_binary() {
         export GOEXPERIMENT=jsonv2
         export CGO_ENABLED=0
         "${GO_BIN}" mod download
-        "${GO_BIN}" build -v -o "${WORK_DIR}/v2node" -trimpath \
+        "${GO_BIN}" build -v -o "${WORK_DIR}/${BINARY_NAME}" -trimpath \
             -ldflags "-X 'github.com/wyx2685/v2node/cmd.version=${version}' -s -w -buildid="
     )
-    [[ -s "${WORK_DIR}/v2node" ]] || die "build did not produce a binary"
+    [[ -s "${WORK_DIR}/${BINARY_NAME}" ]] || die "build did not produce a binary"
 }
 
 prepare_binary() {
     if [[ -n "${PREBUILT_BINARY}" ]]; then
         [[ -s "${PREBUILT_BINARY}" ]] || die "prebuilt binary not found: ${PREBUILT_BINARY}"
-        install -m 0755 "${PREBUILT_BINARY}" "${WORK_DIR}/v2node"
+        install -m 0755 "${PREBUILT_BINARY}" "${WORK_DIR}/${BINARY_NAME}"
         log "Using the prebuilt MPTCP binary"
         return
     fi
@@ -245,19 +248,19 @@ install_data_files() {
 
 install_service() {
     install -d -m 0755 "${PREFIX}"
-    if [[ -x "${PREFIX}/v2node" ]]; then
-        BACKUP_BINARY="${PREFIX}/v2node.bak.$(date +%Y%m%d%H%M%S)"
-        cp -a "${PREFIX}/v2node" "${BACKUP_BINARY}"
+    if [[ -x "${PREFIX}/${BINARY_NAME}" ]]; then
+        BACKUP_BINARY="${PREFIX}/${BINARY_NAME}.bak.$(date +%Y%m%d%H%M%S)"
+        cp -a "${PREFIX}/${BINARY_NAME}" "${BACKUP_BINARY}"
         log "Backed up the existing binary to ${BACKUP_BINARY}"
     fi
 
-    systemctl stop v2node 2>/dev/null || true
-    install -m 0755 "${WORK_DIR}/v2node" "${PREFIX}/v2node"
-    install -m 0755 "${SOURCE_ROOT}/script/v2node-mptcp.sh" /usr/bin/v2node
+    systemctl stop "${SERVICE_NAME}" 2>/dev/null || true
+    install -m 0755 "${WORK_DIR}/${BINARY_NAME}" "${PREFIX}/${BINARY_NAME}"
+    install -m 0755 "${SOURCE_ROOT}/script/v2node-mptcp.sh" "${MANAGER_FILE}"
 
     cat > "${SERVICE_FILE}" <<'EOF'
 [Unit]
-Description=v2node MPTCP Service
+Description=v2node MPTCP Service (independent edition)
 After=network-online.target nss-lookup.target
 Wants=network-online.target
 
@@ -266,8 +269,10 @@ User=root
 Group=root
 Type=simple
 LimitNOFILE=999999
-WorkingDirectory=/usr/local/v2node/
-ExecStart=/usr/local/v2node/v2node server
+WorkingDirectory=/usr/local/v2node-mptcp/
+Environment=V2NODE_CERT_DIR=/etc/v2node-mptcp
+Environment=XRAY_LOCATION_ASSET=/etc/v2node-mptcp
+ExecStart=/usr/local/v2node-mptcp/v2node-mptcp server --config /etc/v2node-mptcp/config.json
 Restart=always
 RestartSec=10
 
@@ -276,19 +281,19 @@ WantedBy=multi-user.target
 EOF
 
     systemctl daemon-reload
-    systemctl enable v2node >/dev/null
-    if systemctl restart v2node && sleep 2 && systemctl is-active --quiet v2node; then
+    systemctl enable "${SERVICE_NAME}" >/dev/null
+    if systemctl restart "${SERVICE_NAME}" && sleep 2 && systemctl is-active --quiet "${SERVICE_NAME}"; then
         log "v2node MPTCP edition is running"
         return
     fi
 
-    systemctl status v2node --no-pager -l || true
+    systemctl status "${SERVICE_NAME}" --no-pager -l || true
     if [[ -n "${BACKUP_BINARY}" && -f "${BACKUP_BINARY}" ]]; then
         warn "startup failed; restoring the previous binary"
-        install -m 0755 "${BACKUP_BINARY}" "${PREFIX}/v2node"
-        systemctl restart v2node || true
+        install -m 0755 "${BACKUP_BINARY}" "${PREFIX}/${BINARY_NAME}"
+        systemctl restart "${SERVICE_NAME}" || true
     fi
-    die "v2node failed to start; inspect: journalctl -u v2node -n 100 --no-pager"
+    die "v2node MPTCP failed to start; inspect: journalctl -u ${SERVICE_NAME} -n 100 --no-pager"
 }
 
 install_packages
@@ -301,8 +306,9 @@ install_service
 echo
 log "Installation complete"
 echo "Config: ${CONFIG_FILE}"
-echo "Status: systemctl status v2node --no-pager"
-echo "Logs:   journalctl -u v2node -n 100 --no-pager"
-echo "Menu:   v2node"
+echo "Status: systemctl status ${SERVICE_NAME} --no-pager"
+echo "Logs:   journalctl -u ${SERVICE_NAME} -n 100 --no-pager"
+echo "Menu:   v2node-mptcp"
 echo
-log "Use 'v2node' to manage services and multiple nodes."
+log "The upstream v2node installation was not modified."
+log "Use 'v2node-mptcp' to manage this edition and multiple nodes."

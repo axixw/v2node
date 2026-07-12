@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-CONFIG_FILE="/etc/v2node/config.json"
-SERVICE_NAME="v2node"
+CONFIG_DIR="/etc/v2node-mptcp"
+CONFIG_FILE="${CONFIG_DIR}/config.json"
+INSTALL_DIR="/usr/local/v2node-mptcp"
+BINARY_FILE="${INSTALL_DIR}/v2node-mptcp"
+SERVICE_NAME="v2node-mptcp"
+SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
+MANAGER_FILE="/usr/bin/v2node-mptcp"
 INSTALL_URL="https://raw.githubusercontent.com/axixw/v2node/refs/heads/mptcp/script/install.sh"
 
 red='\033[0;31m'
@@ -20,7 +25,7 @@ require_root() {
 }
 
 require_installed() {
-    [[ -x /usr/local/v2node/v2node ]] || die "v2node 尚未安装"
+    [[ -x "${BINARY_FILE}" ]] || die "v2node MPTCP 尚未安装"
 }
 
 require_config() {
@@ -42,7 +47,7 @@ restart_service() {
     systemctl restart "${SERVICE_NAME}"
     sleep 2
     if service_active; then
-        echo -e "${green}v2node 重启成功${plain}"
+        echo -e "${green}v2node MPTCP 重启成功${plain}"
         return 0
     fi
     systemctl status "${SERVICE_NAME}" --no-pager -l || true
@@ -174,13 +179,15 @@ run_installer() {
 }
 
 uninstall_v2node() {
-    read -r -p "确认卸载 v2node？配置和证书也会删除。[y/N]: " confirm
+    read -r -p "确认卸载 v2node MPTCP？它的配置和证书也会删除，原版不受影响。[y/N]: " confirm
     [[ "${confirm}" == "y" || "${confirm}" == "Y" ]] || return 0
     systemctl disable --now "${SERVICE_NAME}" 2>/dev/null || true
-    rm -f /etc/systemd/system/v2node.service
+    rm -f "${SERVICE_FILE}"
     systemctl daemon-reload
-    rm -rf /etc/v2node /usr/local/v2node
-    echo -e "${green}卸载完成。管理命令仍保留在 /usr/bin/v2node${plain}"
+    rm -rf "${CONFIG_DIR}" "${INSTALL_DIR}"
+    rm -f /etc/sysctl.d/90-v2node-mptcp.conf
+    echo -e "${green}v2node MPTCP 卸载完成，原版 v2node 没有改动。${plain}"
+    echo "如需删除本管理命令，请退出后执行：rm -f ${MANAGER_FILE}"
 }
 
 show_menu() {
@@ -188,13 +195,13 @@ show_menu() {
         local status
         if service_active; then
             status="${green}运行中${plain}"
-        elif [[ -x /usr/local/v2node/v2node ]]; then
+        elif [[ -x "${BINARY_FILE}" ]]; then
             status="${yellow}已停止${plain}"
         else
             status="${red}未安装${plain}"
         fi
         echo -e "
-${green}v2node MPTCP 管理菜单${plain}
+${green}v2node MPTCP 独立版管理菜单${plain}
 状态: ${status}
 ----------------------------------------
   1. 查看节点
@@ -202,15 +209,15 @@ ${green}v2node MPTCP 管理菜单${plain}
   3. 删除节点
   4. 修改完整配置
 ----------------------------------------
-  5. 启动 v2node
-  6. 停止 v2node
-  7. 重启 v2node
+  5. 启动 v2node MPTCP
+  6. 停止 v2node MPTCP
+  7. 重启 v2node MPTCP
   8. 查看状态
   9. 查看日志
 ----------------------------------------
  10. 更新 MPTCP 版本
- 11. 安装 v2node
- 12. 卸载 v2node
+ 11. 安装 v2node MPTCP
+ 12. 卸载 v2node MPTCP
   0. 退出
 "
         read -r -p "请输入选择 [0-12]: " choice
@@ -235,13 +242,13 @@ ${green}v2node MPTCP 管理菜单${plain}
 
 show_usage() {
     echo "用法:"
-    echo "  v2node              显示管理菜单"
-    echo "  v2node list         查看节点"
-    echo "  v2node add          添加节点"
-    echo "  v2node remove       删除节点"
-    echo "  v2node config       修改完整配置"
-    echo "  v2node start|stop|restart|status|log"
-    echo "  v2node update       更新 MPTCP 版本"
+    echo "  v2node-mptcp              显示管理菜单"
+    echo "  v2node-mptcp list         查看节点"
+    echo "  v2node-mptcp add          添加节点"
+    echo "  v2node-mptcp remove       删除节点"
+    echo "  v2node-mptcp config       修改完整配置"
+    echo "  v2node-mptcp start|stop|restart|status|log"
+    echo "  v2node-mptcp update       更新 MPTCP 版本"
 }
 
 require_root
