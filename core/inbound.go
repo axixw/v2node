@@ -48,7 +48,7 @@ func (v *V2Core) addInbound(config *core.InboundHandlerConfig) error {
 }
 
 // BuildInbound build Inbound config for different protocol
-func buildInbound(nodeInfo *panel.NodeInfo, tag string) (*core.InboundHandlerConfig, error) {
+func buildInbound(nodeInfo *panel.NodeInfo, tag string, enableMPTCP bool) (*core.InboundHandlerConfig, error) {
 	in := &coreConf.InboundDetourConfig{}
 	var err error
 	switch nodeInfo.Type {
@@ -72,6 +72,16 @@ func buildInbound(nodeInfo *panel.NodeInfo, tag string) (*core.InboundHandlerCon
 	if err != nil {
 		return nil, err
 	}
+	if nodeInfo.Type == "anytls" && enableMPTCP {
+		if in.StreamSetting == nil {
+			t := coreConf.TransportProtocol(nodeInfo.Common.Network)
+			in.StreamSetting = &coreConf.StreamConfig{Network: &t}
+		}
+		if in.StreamSetting.SocketSettings == nil {
+			in.StreamSetting.SocketSettings = &coreConf.SocketConfig{}
+		}
+		in.StreamSetting.SocketSettings.TcpMptcp = true
+	}
 	// Set network protocol
 	if len(nodeInfo.Common.NetworkSettings) > 0 {
 		n := &NetworkSettingsProxyProtocol{}
@@ -82,17 +92,12 @@ func buildInbound(nodeInfo *panel.NodeInfo, tag string) (*core.InboundHandlerCon
 		if n.AcceptProxyProtocol {
 			if in.StreamSetting == nil {
 				t := coreConf.TransportProtocol(nodeInfo.Common.Network)
-				in.StreamSetting = &coreConf.StreamConfig{
-					Network: &t,
-					SocketSettings: &coreConf.SocketConfig{
-						AcceptProxyProtocol: n.AcceptProxyProtocol,
-					},
-				}
-			} else {
-				in.StreamSetting.SocketSettings = &coreConf.SocketConfig{
-					AcceptProxyProtocol: n.AcceptProxyProtocol,
-				}
+				in.StreamSetting = &coreConf.StreamConfig{Network: &t}
 			}
+			if in.StreamSetting.SocketSettings == nil {
+				in.StreamSetting.SocketSettings = &coreConf.SocketConfig{}
+			}
+			in.StreamSetting.SocketSettings.AcceptProxyProtocol = true
 		}
 	}
 	// Set server port

@@ -1,0 +1,43 @@
+name: MPTCP CI
+
+on:
+  push:
+    branches:
+      - mptcp
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.1'
+          cache: true
+
+      - name: Check installer syntax
+        run: bash -n script/install-mptcp.sh
+
+      - name: Test packages
+        env:
+          GOEXPERIMENT: jsonv2
+          CGO_ENABLED: 0
+        run: go test ./...
+
+      - name: Build Linux amd64
+        env:
+          GOEXPERIMENT: jsonv2
+          CGO_ENABLED: 0
+          GOOS: linux
+          GOARCH: amd64
+        run: go build -trimpath -o build_assets/v2node-mptcp .
