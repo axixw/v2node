@@ -104,7 +104,7 @@ install_packages() {
 }
 
 install_go() {
-    local goarch archive url checksum
+    local goarch archive url checksum_url checksum
 
     case "$(uname -m)" in
         x86_64|amd64) goarch="amd64" ;;
@@ -127,10 +127,11 @@ install_go() {
     fi
 
     archive="go${GO_VERSION}.linux-${goarch}.tar.gz"
-    url="https://go.dev/dl/${archive}"
+    url="https://dl.google.com/go/${archive}"
+    checksum_url="${url}.sha256"
     log "Downloading Go ${GO_VERSION} for ${goarch}"
     curl -fL "${url}" -o "${WORK_DIR}/${archive}"
-    checksum="$(curl -fsSL "${url}.sha256")"
+    checksum="$(curl -fsSL "${checksum_url}")"
     [[ "${checksum}" =~ ^[0-9a-fA-F]{64}$ ]] || die "invalid Go checksum response"
     echo "${checksum}  ${WORK_DIR}/${archive}" | sha256sum -c -
 
