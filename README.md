@@ -8,8 +8,18 @@ A v2board backend base on moddified xray-core.
 
 ### 一键安装
 
+```bash
+wget -N https://raw.githubusercontent.com/axixw/v2node/refs/heads/mptcp/script/install.sh \
+  && sudo bash install.sh
 ```
-wget -N https://raw.githubusercontent.com/wyx2685/v2node/master/script/install.sh && bash install.sh
+
+首次安装可以直接传入面板地址和节点 ID，密钥会在随后出现的隐藏输入提示中填写：
+
+```bash
+wget -N https://raw.githubusercontent.com/axixw/v2node/refs/heads/mptcp/script/install.sh \
+  && sudo bash install.sh \
+    --api-host 'https://panel.example.com/' \
+    --node-id 1
 ```
 
 ## 构建

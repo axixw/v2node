@@ -26,7 +26,9 @@ jobs:
           cache: true
 
       - name: Check installer syntax
-        run: bash -n script/install-mptcp.sh
+        run: |
+          bash -n script/install.sh
+          bash -n script/install-mptcp.sh
 
       - name: Test packages
         env:
