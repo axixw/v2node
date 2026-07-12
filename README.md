@@ -13,6 +13,9 @@ wget -N https://raw.githubusercontent.com/axixw/v2node/refs/heads/mptcp/script/i
   && sudo bash install.sh
 ```
 
+该入口直接下载 GitHub Actions 生成的预编译 MPTCP 二进制，不会在节点服务器上
+安装 Go 或现场编译。
+
 首次安装可以直接传入面板地址和节点 ID，密钥会在随后出现的隐藏输入提示中填写：
 
 ```bash
@@ -145,7 +148,8 @@ script/install-mptcp.sh
 解决冲突并完成测试后，重新运行：
 
 ```bash
-sudo bash script/install-mptcp.sh
+wget -N https://raw.githubusercontent.com/axixw/v2node/refs/heads/mptcp/script/install.sh \
+  && sudo bash install.sh
 ```
 
 服务器上建议克隆自己的修改分支：
@@ -156,12 +160,16 @@ cd /root/v2node-mptcp
 sudo bash script/install-mptcp.sh
 ```
 
+上面的源码安装方式会在服务器上编译。生产节点通常应使用前面的预编译一键安装
+命令。
+
 后续部署更新：
 
 ```bash
 cd /root/v2node-mptcp
 git pull --ff-only origin mptcp
-sudo bash script/install-mptcp.sh
+wget -N https://raw.githubusercontent.com/axixw/v2node/refs/heads/mptcp/script/install.sh \
+  && sudo bash install.sh
 ```
 
 不要在生产节点上直接合并上游或解决冲突。应先在自己的开发副本中完成合并和

@@ -11,6 +11,7 @@ SERVICE_FILE="/etc/systemd/system/v2node.service"
 SOURCE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORK_DIR="$(mktemp -d)"
 BACKUP_BINARY=""
+PREBUILT_BINARY=""
 
 API_HOST=""
 NODE_ID=""
@@ -48,6 +49,7 @@ Options:
   --api-host URL    XiaoV2board URL, used only when config.json is absent
   --node-id ID      V2Node ID, used only when config.json is absent
   --api-key KEY     XiaoV2board server_token, used only when config.json is absent
+  --binary-file PATH Use a prebuilt v2node binary instead of compiling locally
   --help            Show this help
 
 The installer builds the checked-out source, preserves the existing config,
@@ -71,6 +73,11 @@ while [[ $# -gt 0 ]]; do
         --api-key)
             [[ $# -ge 2 ]] || die "--api-key requires a value"
             API_KEY="$2"
+            shift 2
+            ;;
+        --binary-file)
+            [[ $# -ge 2 ]] || die "--binary-file requires a value"
+            PREBUILT_BINARY="$2"
             shift 2
             ;;
         --help|-h)
@@ -156,6 +163,19 @@ build_binary() {
             -ldflags "-X 'github.com/wyx2685/v2node/cmd.version=${version}' -s -w -buildid="
     )
     [[ -s "${WORK_DIR}/v2node" ]] || die "build did not produce a binary"
+}
+
+prepare_binary() {
+    if [[ -n "${PREBUILT_BINARY}" ]]; then
+        [[ -s "${PREBUILT_BINARY}" ]] || die "prebuilt binary not found: ${PREBUILT_BINARY}"
+        install -m 0755 "${PREBUILT_BINARY}" "${WORK_DIR}/v2node"
+        log "Using the prebuilt MPTCP binary"
+        return
+    fi
+
+    warn "No prebuilt binary was supplied; falling back to a local Go build"
+    install_go
+    build_binary
 }
 
 configure_node() {
@@ -271,8 +291,7 @@ EOF
 }
 
 install_packages
-install_go
-build_binary
+prepare_binary
 configure_node
 enable_kernel_mptcp
 install_data_files

@@ -43,3 +43,47 @@ jobs:
           GOOS: linux
           GOARCH: amd64
         run: go build -trimpath -o build_assets/v2node-mptcp .
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/mptcp'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.1'
+          cache: true
+
+      - name: Build release assets
+        env:
+          GOEXPERIMENT: jsonv2
+          CGO_ENABLED: 0
+        run: |
+          mkdir -p build_assets dist
+          for arch in amd64 arm64; do
+            GOOS=linux GOARCH="$arch" go build -trimpath \
+              -ldflags "-X 'github.com/wyx2685/v2node/cmd.version=mptcp-${GITHUB_SHA::7}' -s -w -buildid=" \
+              -o build_assets/v2node .
+            tar -C build_assets -czf "dist/v2node-linux-${arch}.tar.gz" v2node
+            sha256sum "dist/v2node-linux-${arch}.tar.gz" \
+              | awk '{print $1}' > "dist/v2node-linux-${arch}.tar.gz.sha256"
+          done
+
+      - name: Publish rolling release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view mptcp-latest >/dev/null 2>&1; then
+            gh release upload mptcp-latest dist/* --clobber
+          else
+            gh release create mptcp-latest dist/* \
+              --target "$GITHUB_SHA" \
+              --title "v2node MPTCP latest" \
+              --notes "Rolling prebuilt binaries for the mptcp branch."
+          fi
