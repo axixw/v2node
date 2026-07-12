@@ -16,6 +16,15 @@ wget -N https://raw.githubusercontent.com/axixw/v2node/refs/heads/mptcp/script/i
 该入口直接下载 GitHub Actions 生成的预编译 MPTCP 二进制，不会在节点服务器上
 安装 Go 或现场编译。
 
+安装完成后运行管理菜单：
+
+```bash
+v2node
+```
+
+菜单可以查看、添加和删除多个节点，也可以启动、停止、查看日志及更新 MPTCP
+版本。添加节点会自动写入 `EnableMPTCP: true`，修改配置前会保留时间戳备份。
+
 首次安装可以直接传入面板地址和节点 ID，密钥会在随后出现的隐藏输入提示中填写：
 
 ```bash
@@ -72,7 +81,7 @@ sudo bash script/install-mptcp.sh \
   --api-key 'your-server-token'
 ```
 
-脚本会执行以下操作：
+未提供预编译文件、直接运行源码安装脚本时，会执行以下操作：
 
 - 安装并校验构建所需的 Go 1.26.1；
 - 从当前工作树编译修改版 v2node；
@@ -90,9 +99,9 @@ journalctl -u v2node -n 100 --no-pager
 sysctl net.mptcp.enabled
 ```
 
-不要执行原版管理脚本的 `v2node update`，它会从上游 Release 下载未修改的
-二进制并覆盖 MPTCP 修改版。需要更新时，应拉取新源码、重新合并本修改并再次
-运行 `script/install-mptcp.sh`。
+一键安装会同时安装本分支的 `v2node` 管理菜单。可以使用菜单中的“更新 MPTCP
+版本”或执行 `v2node update`；它只会从 `axixw/v2node` 的 `mptcp` 分支更新，
+不会下载上游未修改的二进制。
 
 注意：服务端 MPTCP 与 Mihomo 订阅的 `mptcp: true` 是两项独立配置。客户端
 要显示标签并发起 MPTCP 拨号，XiaoV2board 的 AnyTLS 订阅生成器仍需输出该字段。

@@ -253,6 +253,7 @@ install_service() {
 
     systemctl stop v2node 2>/dev/null || true
     install -m 0755 "${WORK_DIR}/v2node" "${PREFIX}/v2node"
+    install -m 0755 "${SOURCE_ROOT}/script/v2node-mptcp.sh" /usr/bin/v2node
 
     cat > "${SERVICE_FILE}" <<'EOF'
 [Unit]
@@ -302,5 +303,6 @@ log "Installation complete"
 echo "Config: ${CONFIG_FILE}"
 echo "Status: systemctl status v2node --no-pager"
 echo "Logs:   journalctl -u v2node -n 100 --no-pager"
+echo "Menu:   v2node"
 echo
-warn "Do not run the upstream 'v2node update' command; it installs the unmodified release binary."
+log "Use 'v2node' to manage services and multiple nodes."

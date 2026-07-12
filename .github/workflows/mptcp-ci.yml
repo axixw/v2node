@@ -29,6 +29,7 @@ jobs:
         run: |
           bash -n script/install.sh
           bash -n script/install-mptcp.sh
+          bash -n script/v2node-mptcp.sh
 
       - name: Test packages
         env:
